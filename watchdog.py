@@ -112,6 +112,7 @@ class InstanceState:
         self.anime_ui_validation_passed: bool = False
         self.anime_ui_last_log_at: float = 0.0
         self.last_force_rejoin_at: float = time.time()
+        self.rapid_rejoin_times: list = []  # rolling timestamps of recent rejoins
         self.lock = threading.RLock()
 
 
@@ -416,6 +417,71 @@ class EmuWatchdog:
         return True
 
     def trigger_instance_rejoin(self, inst: InstanceState, reason: str):
+        # --- Rapid rejoin guard: 3 rejoins within window -> full VM reboot ---
+        rapid_threshold = self.config.get("watchdog", {}).get("rapid_rejoin_window_seconds", 600)
+        rapid_limit = self.config.get("watchdog", {}).get("rapid_rejoin_limit", 3)
+        now_check = time.time()
+        with inst.lock:
+            # Append this rejoin attempt and prune old ones outside the window
+            inst.rapid_rejoin_times.append(now_check)
+            inst.rapid_rejoin_times = [
+                t for t in inst.rapid_rejoin_times
+                if (now_check - t) <= rapid_threshold
+            ]
+            do_vm_reboot = (
+                len(inst.rapid_rejoin_times) >= rapid_limit
+                and self.is_mumu_mode()
+                and self.config.get("watchdog", {}).get("auto_restart_vm_on_stuck", True)
+            )
+        if do_vm_reboot:
+            with inst.lock:
+                inst.status = "REBOOTING VM"
+                inst.reconnect_count += 1
+                inst.last_reason = reason
+                inst.consecutive_pid_misses = 0
+                inst.consecutive_stale_game_checks = 0
+                inst.disconnect_candidate_since = None
+                inst.disconnect_candidate_reason = ""
+                inst.disconnect_candidate_checks = 0
+                inst.connection_error_since = None
+                inst.connection_error_checks = 0
+                inst.is_wait_276 = False
+                inst.rapid_rejoin_times.clear()
+            self.add_event_log(
+                f"[VM #{inst.index} | {inst.username[:12]}] [RAPID x{rapid_limit}] Rejoined {rapid_limit}x in {rapid_threshold}s -> REBOOTING VM"
+            )
+            if self.config.get("notification", {}).get("notify_on_disconnect", True):
+                self.send_discord_webhook_async(
+                    title=f"VM #{inst.index} Rebooting (Rapid Rejoin x{rapid_limit})",
+                    description=(
+                        f"**Instance:** `{inst.name}` (VM #{inst.index})\n"
+                        f"**Account:** `{inst.username}` (`{inst.user_id or 'N/A'}`)\n"
+                        f"**Reason:** Rejoined {rapid_limit}x within {rapid_threshold}s -> VM reboot\n"
+                        f"**Last reason:** `{reason}`"
+                    ),
+                    color_hex=0xFF8800
+                )
+            vm_boot_timeout = self.config.get("watchdog", {}).get("vm_boot_timeout_seconds", 90)
+            self.mumu.shutdown_player(inst.index)
+            time.sleep(3)
+            self.mumu.launch_player(inst.index)
+            self.mumu.wait_for_instance_ready(inst.index, timeout=vm_boot_timeout)
+            place_id, vip_link, job_id = self.get_target_for_instance(inst.index)
+            autoexec_urls = self.config.get("target", {}).get("autoexec_urls", None)
+            self.mumu.launch_roblox(
+                place_id=place_id,
+                vip_link=vip_link,
+                job_id=job_id,
+                index=inst.index,
+                autoexec_urls=autoexec_urls,
+                two_stage=True
+            )
+            with inst.lock:
+                inst.roblox_started_at = time.time()
+                inst.consecutive_script_failures = 0
+                inst.has_ever_heartbeated = False
+            return
+
         with inst.lock:
             inst.status = "REJOINING"
             inst.reconnect_count += 1
