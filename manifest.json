@@ -1,8 +1,8 @@
 {
   "files": {
-    "watchdog.py": "238137239e60135d581ac68c879950eb8eb4d98116cf0a994ed1b9ffa21b34e4",
-    "mumu_controller.py": "6ae45b8c27903857e16ca42b5da7e0d9cf2f4c765227b702c6f886b471f417ef",
-    "adb_manager.py": "f3ea348ccf2924ad4c9565e9a87cf6a697996bea7ca03749c85073a11ab661d2",
+    "watchdog.py": "24632b69494d82b8fef9dd3ba2ed8e5e5cfeb29c8e0c6971bff2c70d99762a91",
+    "mumu_controller.py": "bcd7faf2e479e72f9ae2067199340e1c4ae52f3a89d0f664a580ba0c5a04d246",
+    "adb_manager.py": "20899fb56ba9cdfdb5e4d257ad934d1d2629e616f920dad289410dcce78ee7bb",
     "ldconsole.py": "32a00ef5e5cc4fe62fa93c7c97fb841df8aea1e074f16df795423a04ce059fee",
     "autorun_manager.py": "afd86eaa06a4c24f526e23acafd1717b1cf0009967e15550c5380529ba91719b",
     "rokid_services.py": "48d305cd41b4152ce2af909a731436bb03101c36295589043fbc933dcdf9c2e4",

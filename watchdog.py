@@ -381,7 +381,7 @@ class EmuWatchdog:
 ║ {BOLD}MAIN MENU{RESET}{LIGHT_BLUE}     ║ {YELLOW}> 1-Start Watchdog      2-Multi-Instance Mgr    3-Target & VIP Setup   {RESET}{LIGHT_BLUE}║
 ║               ║ {YELLOW}> 4-Rokid Cookie/Accs   5-Autoexec Script Mgr   6-Windows Auto-Start   {RESET}{LIGHT_BLUE}║
 ║               ║ {YELLOW}> 7-Tile All Windows    8-Discord Webhook       9-Rejoin Test / Kill   {RESET}{LIGHT_BLUE}║
-║               ║ {YELLOW}> 0-Exit Program{RESET}{LIGHT_BLUE}                                                       ║
+║               ║ {YELLOW}> 10-Install APK to VMs 0-Exit Program{RESET}{LIGHT_BLUE}                                         ║
 ╚═══════════════╩════════════════════════════════════════════════════════════════════════╝{RESET}"""
         print(box)
 
@@ -1905,6 +1905,100 @@ class EmuWatchdog:
         if interactive:
             input(f"\n{GREEN}[+] สั่งปิดและเคลียร์ Process Roblox ทุกจอเรียบร้อย! (กด Enter){RESET}")
 
+    def install_apk_menu(self):
+        self.print_ascii_header()
+        print(f"{CYAN}{BOLD}📦 INSTALL APK TO EMULATORS (ติดตั้งไฟล์ APK ลงจำลอง){RESET}\n")
+        target_insts = self.config.get("multi_instance", {}).get("target_instances", [0])
+        print(f"  จอที่ตั้งค่าในระบบ: {WHITE}{target_insts}{RESET}")
+        print(f"  โหมดจำลอง: {GREEN}{'MuMu Hypervisor RPC' if self.is_mumu_mode() else 'ADB'}{RESET}\n")
+        raw_path = input(f"{YELLOW}👉 ลากไฟล์ .apk / .xapk มาวางที่นี่ (หรือ 0 เพื่อยกเลิก): {RESET}").strip()
+        apk_path = raw_path.strip('"').strip("'").strip()
+        if not apk_path or apk_path == "0":
+            return
+        if not os.path.isfile(apk_path):
+            print(f"\n{RED}[!] ไม่พบไฟล์: {apk_path}{RESET}")
+            input(f"\n{YELLOW}กด Enter เพื่อกลับเมนูหลัก...{RESET}")
+            return
+        file_size_mb = os.path.getsize(apk_path) / (1024 * 1024)
+        print(f"\n  📄 ไฟล์: {CYAN}{os.path.basename(apk_path)}{RESET} ({file_size_mb:.2f} MB)\n")
+        print(f"  [1] ติดตั้งทุกจอที่ตั้งค่าไว้ {WHITE}{target_insts}{RESET}")
+        print(f"  [2] ติดตั้ง 'ทุกจอ' ทั้งหมดใน MuMu (all)")
+        print(f"  [3] เลือกระบุหมายเลขจอเอง (เช่น 8, 9, 11 หรือ 8)")
+        print(f"  [0] ยกเลิก\n")
+        sub = input(f"{PINK}cook45@install:~? {RESET}").strip()
+        if sub == "1":
+            chosen = target_insts
+        elif sub == "2":
+            chosen = "all"
+        elif sub == "3":
+            inp = input(f"{YELLOW}ระบุหมายเลขจอ (คั่นด้วยจุลภาค เช่น 8, 9 หรือเลขเดียว): {RESET}").strip()
+            vms = [int(x.strip()) for x in inp.replace(" ", ",").split(",") if x.strip().isdigit()]
+            if not vms:
+                print(f"{RED}[!] ไม่ได้ระบุเลขจอที่ถูกต้อง{RESET}")
+                time.sleep(1)
+                return
+            chosen = vms
+        else:
+            return
+        self.install_apk_cmd(apk_path=apk_path, target_vms=chosen, interactive=True)
+
+    def install_apk_cmd(self, apk_path: str, target_vms: Any = "all", interactive: bool = True):
+        apk_clean = os.path.abspath(str(apk_path or "").strip().strip('"').strip("'"))
+        if not os.path.isfile(apk_clean):
+            print(f"{RED}[!] ไม่พบไฟล์ APK: {apk_clean}{RESET}")
+            if interactive:
+                input("\nกด Enter เพื่อกลับ...")
+            return
+        base_name = os.path.basename(apk_clean)
+        size_mb = os.path.getsize(apk_clean) / (1024 * 1024)
+        print(f"\n{CYAN}{BOLD}🚀 กำลังติดตั้ง: {WHITE}{base_name}{RESET} ({size_mb:.2f} MB)")
+        if self.is_mumu_mode():
+            if isinstance(target_vms, (list, tuple, set)):
+                vms_to_run = list(target_vms)
+            elif str(target_vms).strip().lower() in ("all", "*"):
+                vms_to_run = "all"
+            elif "," in str(target_vms):
+                vms_to_run = [int(x.strip()) for x in str(target_vms).split(",") if x.strip().isdigit()]
+            elif str(target_vms).strip().isdigit():
+                vms_to_run = [int(str(target_vms).strip())]
+            else:
+                vms_to_run = "all"
+            if vms_to_run == "all":
+                print(f"  {MAGENTA}⚡ กำลังติดตั้งไปยังทุกจอใน MuMu Player (all)...{RESET}")
+                ok, msg = self.mumu.install_apk(apk_clean, index="all")
+                if ok:
+                    print(f"  {GREEN}✅ ติดตั้ง APK ทุกจอสำเร็จ!{RESET}")
+                else:
+                    print(f"  {RED}❌ การติดตั้งล้มเหลว: {msg}{RESET}")
+            else:
+                for idx in vms_to_run:
+                    sys.stdout.write(f"  [{CYAN}VM #{idx}{RESET}] ⏳ กำลังติดตั้ง... ")
+                    sys.stdout.flush()
+                    ok, msg = self.mumu.install_apk(apk_clean, index=idx)
+                    if ok:
+                        print(f"{GREEN}✅ ติดตั้งสำเร็จ!{RESET}")
+                    else:
+                        print(f"{RED}❌ ล้มเหลว ({msg}){RESET}")
+        else:
+            if isinstance(target_vms, (list, tuple, set)):
+                vms = list(target_vms)
+            elif str(target_vms).strip().isdigit():
+                vms = [int(str(target_vms).strip())]
+            else:
+                vms = self.config.get("multi_instance", {}).get("target_instances", [0])
+            for idx in vms:
+                serial = self.get_adb_serial_for_instance(idx)
+                sys.stdout.write(f"  [{CYAN}Device #{idx}{RESET} ({serial})] ⏳ กำลังติดตั้งผ่าน ADB... ")
+                sys.stdout.flush()
+                ok, msg = self.adb.install_apk(apk_clean, serial=serial)
+                if ok:
+                    print(f"{GREEN}✅ ติดตั้งสำเร็จ!{RESET}")
+                else:
+                    print(f"{RED}❌ ล้มเหลว ({msg}){RESET}")
+        print(f"\n{GREEN}{BOLD}✨ สิ้นสุดกระบวนการติดตั้ง APK เรียบร้อย!{RESET}")
+        if interactive:
+            input(f"\n{YELLOW}กด Enter เพื่อกลับหน้าเมนู...{RESET}")
+
     def test_rejoin_cmd(self, interactive: bool = True):
         self.print_ascii_header()
         target_insts = self.config.get("multi_instance", {}).get("target_instances", [0])
@@ -1967,6 +2061,8 @@ class EmuWatchdog:
                 self.discord_webhook_menu()
             elif choice == "9":
                 self.rejoin_or_kill_menu()
+            elif choice == "10" or choice.lower() in ("install", "apk"):
+                self.install_apk_menu()
             elif choice == "0" or choice.lower() == "exit":
                 self.presence_tracker.save_cache()
                 print(f"\n{YELLOW}👋 ปิดโปรแกรมแล้ว เจอกันเพื่อนรัก clack!{RESET}")
@@ -1981,9 +2077,15 @@ def main():
     parser.add_argument("--rejoin-now", action="store_true", help="Trigger immediate rejoin test")
     parser.add_argument("--kill", action="store_true", help="Force stop Roblox and exit")
     parser.add_argument("--tile", action="store_true", help="Tile windows and exit")
+    parser.add_argument("--install-apk", dest="install_apk", help="Path to .apk/.xapk to install")
+    parser.add_argument("--vm", default="all", help="Target VM index, comma-separated list (e.g. 8,9,11), or 'all'")
     args = parser.parse_args()
 
     watchdog = EmuWatchdog(config_path=args.config)
+
+    if args.install_apk:
+        watchdog.install_apk_cmd(apk_path=args.install_apk, target_vms=args.vm, interactive=False)
+        return
 
     if args.autorun:
         watchdog.handle_autorun_boot()

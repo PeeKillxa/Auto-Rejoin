@@ -418,6 +418,17 @@ class ADBManager:
         self._last_logcat_line.pop(serial or self.device_serial, None)
         self.shell("logcat -c 2>/dev/null", use_root=False, timeout=5, serial=serial)
 
+    def install_apk(self, apk_path: str, serial: str = "", timeout: int = 180) -> Tuple[bool, str]:
+        """Install an APK package into Android emulator via ADB."""
+        clean_path = os.path.abspath(str(apk_path or "").strip().strip('"').strip("'"))
+        if not os.path.isfile(clean_path):
+            return False, f"File not found: {clean_path}"
+        code, out, err = self._run_cmd(["install", "-r", "-d", clean_path], timeout=timeout, serial=serial)
+        combined = (out + "\n" + err).strip()
+        if code == 0 and "Success" in combined:
+            return True, "Success"
+        return False, combined or f"Exit code {code}"
+
     def kill_roblox(self, serial: str = ""):
         self.shell("am force-stop com.roblox.client; pkill -9 -f com.roblox.client 2>/dev/null", use_root=True, timeout=6, serial=serial)
         time.sleep(1.0)

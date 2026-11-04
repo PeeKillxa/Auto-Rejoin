@@ -432,6 +432,35 @@ class MuMuController:
         self._last_logcat_line.pop(index, None)
         self.sh("logcat -c 2>/dev/null", index=index, timeout=4)
 
+    def install_apk(self, apk_path: str, index: Any = "all", timeout: int = 180) -> Tuple[bool, str]:
+        """Install an APK/APKS/XAPK package into specified MuMu VM index or multiple/all VMs."""
+        clean_path = os.path.abspath(str(apk_path or "").strip().strip('"').strip("'"))
+        if not os.path.isfile(clean_path):
+            return False, f"File not found: {clean_path}"
+        if not self.is_available():
+            return False, "mumu-cli.exe not found"
+        if isinstance(index, (list, tuple, set)):
+            target_str = ",".join(str(i).strip() for i in index)
+        elif str(index).strip().lower() in ("all", "*"):
+            target_str = "all"
+        else:
+            target_str = str(index).strip()
+        raw = self._run(["control", "-v", target_str, "app", "install", "-apk", clean_path], timeout=timeout)
+        if raw:
+            try:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    errcode = data.get("errcode", -1)
+                    errmsg = data.get("errmsg", "")
+                    if errcode == 0:
+                        return True, "Success"
+                    return False, errmsg or f"Error code {errcode}"
+            except Exception:
+                pass
+        if "error" in raw.lower() or "invalid" in raw.lower() or "fail" in raw.lower():
+            return False, raw
+        return True, raw or "Success"
+
     def kill_roblox(self, index: int = 0):
         """Force-kill Roblox cleanly via native RPC."""
         with self._get_inst_lock(index):
