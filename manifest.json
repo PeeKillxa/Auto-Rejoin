@@ -1,7 +1,7 @@
 {
   "files": {
-    "watchdog.py": "24632b69494d82b8fef9dd3ba2ed8e5e5cfeb29c8e0c6971bff2c70d99762a91",
-    "mumu_controller.py": "9d24ed9ff32dbb443c5310a80e4e7c00c72357c534de48b3972a7eb8c6d3776f",
+    "watchdog.py": "666494420a85a3bb2e61504009016ad2cd6a7d633b95c68773d858714fdd8593",
+    "mumu_controller.py": "0f8c36adc67008dee9a02216eaf7fc69964f1188ce121887a1d1c12c90d638d1",
     "adb_manager.py": "20899fb56ba9cdfdb5e4d257ad934d1d2629e616f920dad289410dcce78ee7bb",
     "ldconsole.py": "32a00ef5e5cc4fe62fa93c7c97fb841df8aea1e074f16df795423a04ce059fee",
     "autorun_manager.py": "afd86eaa06a4c24f526e23acafd1717b1cf0009967e15550c5380529ba91719b",
