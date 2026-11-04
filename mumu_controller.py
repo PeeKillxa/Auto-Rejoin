@@ -450,11 +450,15 @@ class MuMuController:
             try:
                 data = json.loads(raw)
                 if isinstance(data, dict):
-                    errcode = data.get("errcode", -1)
+                    # MuMu CLI returns {"package": "com.roblox.client"} on successful install/update!
+                    if "package" in data:
+                        return True, f"Success ({data['package']})"
+                    errcode = data.get("errcode")
                     errmsg = data.get("errmsg", "")
                     if errcode == 0:
                         return True, "Success"
-                    return False, errmsg or f"Error code {errcode}"
+                    if errcode is not None:
+                        return False, errmsg or f"Error code {errcode}"
             except Exception:
                 pass
         if "error" in raw.lower() or "invalid" in raw.lower() or "fail" in raw.lower():
