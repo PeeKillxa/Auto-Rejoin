@@ -1,0 +1,156 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using NexusRobloxManager;
+class RejoinChecks {
+ static int count;
+ static void Assert(bool ok, string label) { if (!ok) throw new Exception(label); count++; Console.WriteLine("PASS " + label); }
+ static object Call(string name, params object[] args) { return typeof(WatchdogEngine).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static).Invoke(null,args); }
+ [STAThread]
+ static void Main(string[] args) {
+  if(args.Length==2 && args[0]=="--instancegate-probe") {
+   InstanceGate lease;
+   bool owned=InstanceGate.TryAcquire(args[1],out lease);
+   if(lease!=null) lease.Dispose();
+   Environment.ExitCode=owned ? 0 : 1;
+   return;
+  }
+  WatchdogEngine.DataDirectoryOverride=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"checks","runtime");
+  Program.WriteDiagnostic("portable-path-check\n");
+  string diagnosticPath=System.IO.Path.Combine(WatchdogEngine.DataDir,"crash.log");
+  Assert(System.IO.File.ReadAllText(diagnosticPath).Contains("portable-path-check"),"diagnostics use the current user's data directory instead of the developer's workspace");
+  using(var lockedLog=new System.IO.FileStream(diagnosticPath,System.IO.FileMode.Open,System.IO.FileAccess.ReadWrite,System.IO.FileShare.None)) {
+   Program.WriteDiagnostic("unavailable-log-check\n");
+  }
+  Assert(true,"an unavailable diagnostic log cannot throw and prevent application startup");
+  byte[] key = Convert.FromBase64String("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
+  byte[] nonce = Convert.FromBase64String("AAECAwQFBgcICQoL");
+  byte[] encrypted = Convert.FromBase64String("CWeubrbFtHr4LeOr0JwMBea4812TGisZXEeB4H4becJ1ecGSj6d74ADRDYjLcXNI5jraLyRappGxk4QK");
+  Assert(Encoding.UTF8.GetString(RealAccountLauncher.DecryptGcm(key,nonce,encrypted)) == "Nexus vault authenticated decryption fixture", "CNG decrypts independent AES-256-GCM fixture");
+  encrypted[0] ^= 1;
+  bool rejected = false;
+  try { RealAccountLauncher.DecryptGcm(key,nonce,encrypted); } catch (CryptographicException) { rejected=true; }
+  Assert(rejected,"tampered vault ciphertext rejected");
+  Assert(WatchdogEngine.RetryDelaySeconds(1)==15 && WatchdogEngine.RetryDelaySeconds(2)==30 && WatchdogEngine.RetryDelaySeconds(99)==300,"retry delay increases and caps at five minutes");
+  string url=RealAccountLauncher.BuildJoinUrl(123,456,"");
+  Assert(url.Contains("request=RequestGame&") && url.Contains("placeId=123&") && url.EndsWith("browserTrackerId=456"),"public target uses requested place and tracker");
+  Assert(RealAccountLauncher.BuildJoinUrl(123,456,"11111111-2222-3333-4444-555555555555").Contains("RequestGameJob&gameId="),"saved Job ID retained");
+  rejected=false;
+  try { RealAccountLauncher.BuildJoinUrl(123,456,"https://example.com/invite"); } catch (InvalidOperationException) { rejected=true; }
+  Assert(rejected,"unsupported private link rejected before closing client");
+  const string original = "[{\"user_id\":1,\"username\":\"Fixture\"},{\"user_id\":2,\"username\":\"Other\"}]";
+  Assert(WatchdogEngine.ApplyRealAccountSnapshot(original),"valid Real inventory accepted");
+  AccountSlot a=WatchdogEngine.FindOrCreateAccount("Fixture",1); a.ExecutablePath="fixture";
+  Call("QueueRejoin",a,"first",true); DateTime due=a.NextRejoinUtc;
+  Call("QueueRejoin",a,"duplicate",true);
+  Assert(a.RejoinPending && a.ManualRejoin && a.LastReason=="first" && a.NextRejoinUtc==due,"duplicate requests keep one queued launch");
+  a.RejoinPending=false; a.ManualRejoin=false; a.StopForConflict=true;
+  Call("QueueRejoin",a,"auto",false);
+  Assert(!a.RejoinPending,"account conflict blocks automatic rejoin");
+  Call("QueueRejoin",a,"manual",true);
+  Assert(a.RejoinPending && !a.StopForConflict,"manual rejoin clears conflict stop");
+  var log=new LogSessionInfo();
+  Call("ParseSessionEventFromLogLine",log,"2026-11-12T01:02:03.276Z Client has been disconnected with reason: 277");
+  Assert(log.Stage=="DISCONNECTED" && log.DisconnectCode==277,"timestamp containing 276 does not flag account conflict");
+  log=new LogSessionInfo(); Call("ParseSessionEventFromLogLine",log,"Error Code: 276");
+  Assert(log.Stage=="ERR 276","actual account conflict recognized");
+  log=new LogSessionInfo(); Call("ParseSessionEventFromLogLine",log,"Client has been disconnected with reason: 2850");
+  Assert(log.Stage=="DISCONNECTED","2850 is not mistaken for teleport 285");
+  log=new LogSessionInfo(); Call("ExtractIdentityFromLogLine",log,"Players.OtherPlayer.PlayerGui.Script: error");
+  Assert(log.Username=="","other players' script errors cannot assign account identity");
+  var sessions=(Dictionary<string,LogSessionInfo>)typeof(WatchdogEngine).GetField("logSessionsByPath",BindingFlags.NonPublic|BindingFlags.Static).GetValue(null);
+  DateTime now=DateTime.UtcNow;
+  sessions["one"]=new LogSessionInfo { FilePath="one",FileCreatedUtc=now,TrackerId=1,UserId=1 };
+  sessions["two"]=new LogSessionInfo { FilePath="two",FileCreatedUtc=now,TrackerId=2,UserId=2 };
+  var win=new RobloxWin { StartTime=now.ToLocalTime() };
+  Assert(Call("FindLogSessionForWindow",win,new HashSet<string>())==null,"simultaneous ambiguous launches stay unidentified");
+  win.TrackerId=2;
+  Assert(((LogSessionInfo)Call("FindLogSessionForWindow",win,new HashSet<string>())).UserId==2,"tracker maps the correct simultaneous account");
+  sessions["two"].FileCreatedUtc=now.AddSeconds(74);
+  Assert(((LogSessionInfo)Call("FindLogSessionForWindow",win,new HashSet<string>())).UserId==2,"matching tracker accepts Roblox log created 74 seconds after process start");
+  sessions["two"].FileCreatedUtc=now.AddMinutes(-1);
+  Assert(Call("FindLogSessionForWindow",win,new HashSet<string>())==null,"tracker from a previous process session cannot supply stale state");
+  sessions.Clear();
+  a.RejoinBusy=true; a.WasObserved=true; a.RestartCount=8; a.Failures=4;
+  var snapshot=(List<RobloxWin>)typeof(WatchdogEngine).GetField("latestWindowsSnapshot",BindingFlags.NonPublic|BindingFlags.Static).GetValue(null);
+  var removedWindow=new RobloxWin { AccountRef=a, UserId=1, Username="Fixture", BotStatus="DISCONNECTED" };
+  snapshot.Add(removedWindow);
+  var kept=WatchdogEngine.FindOrCreateAccount("Other",2);
+  kept.RestartCount=5;
+  Assert(WatchdogEngine.ApplyRealAccountSnapshot("[{\"user_id\":2,\"username\":\"Other\"}]"),"account deletion snapshot accepted");
+  Assert(a.RemovedFromReal && !a.RejoinPending && !a.ManualRejoin && !a.WasObserved && !WatchdogEngine.IsTrackedAccount(a),"deletion cancels even an in-flight queued account");
+  Assert(a.UserId==0 && a.Username=="" && a.RestartCount==0 && a.Failures==0,"deleted account identity and retry history forgotten");
+  Assert(removedWindow.AccountRef==null && removedWindow.Username=="" && removedWindow.BotStatus=="UNMANAGED","cached windows release deleted account references");
+  Assert(WatchdogEngine.FindOrCreateAccount("Fixture",1)==null && WatchdogEngine.FindOrCreateAccount("Fixture",0)==null,"stale logs and heartbeat names cannot resurrect removed accounts");
+  Assert(WatchdogEngine.Accounts.Count==1 && kept.RestartCount==5,"remaining account retains its runtime state");
+  Assert(!WatchdogEngine.ApplyRealAccountSnapshot("[{") && !WatchdogEngine.ApplyRealAccountSnapshot("{}") && !WatchdogEngine.ApplyRealAccountSnapshot("[{}]"),"partial or malformed inventory rejected");
+  Assert(WatchdogEngine.IsTrackedAccount(kept),"malformed reads cannot forget valid accounts");
+  Assert(WatchdogEngine.ApplyRealAccountSnapshot("[]") && WatchdogEngine.Accounts.Count==0,"explicit empty inventory forgets every account");
+  WatchdogEngine.ApplyRealAccountSnapshot(original);
+  var fresh=WatchdogEngine.FindOrCreateAccount("Fixture",1);
+  Assert(fresh!=a && fresh.RestartCount==0 && !fresh.RejoinPending,"explicitly re-added account starts fresh");
+  Call("QueueRejoin",a,"stale callback",true);
+  Assert(!a.RejoinPending,"stale request cannot re-arm a forgotten account");
+  snapshot.Clear();
+  fresh.LastHeartbeatEpoch=(long)(DateTime.UtcNow-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalSeconds-600;
+  var runningAccount=WatchdogEngine.FindOrCreateAccount("Other",2);
+  runningAccount.WasObserved=true; runningAccount.ExecutablePath="fixture";
+  var recoveryWindows=new List<RobloxWin> { new RobloxWin { AccountRef=runningAccount } };
+  Call("RecoverRecentOfflineAccounts",recoveryWindows);
+  Assert(fresh.WasObserved && fresh.ExecutablePath=="fixture","recent offline Real session is recovered after Nexus restart");
+  fresh.WasObserved=false;
+  recoveryWindows.Add(new RobloxWin { TrackerId=77 });
+  Call("RecoverRecentOfflineAccounts",recoveryWindows);
+  Assert(!fresh.WasObserved,"unidentified live tracker delays offline recovery to prevent duplicate clients");
+  var health=new AccountSlot { RejoinPending=true, ManualRejoin=true, CurrentPid=123, LaunchPid=0 };
+  Call("ObserveAccountHealth",health,"FARMING",300.0);
+  Assert(health.RejoinPending && health.ManualRejoin,"healthy original client cannot cancel a queued manual rejoin");
+  health.LaunchPid=123;
+  Call("ObserveAccountHealth",health,"FARMING",15.0);
+  Assert(!health.RejoinPending && !health.ManualRejoin && health.LaunchPid==0,"healthy replacement completes its launch immediately before deadline");
+  health.RejoinPending=true; health.LaunchPid=456;
+  Call("ObserveAccountHealth",health,"IN_GAME",300.0);
+  Assert(health.RejoinPending,"an unrelated healthy process cannot complete the replacement launch");
+  Assert(!(bool)Call("ConfirmUnresponsiveWindow",999,false,now),"a single slow window response does not trigger rejoin");
+  Assert(!(bool)Call("ConfirmUnresponsiveWindow",999,false,now.AddSeconds(29)),"hang detection waits for thirty continuous seconds");
+  Assert((bool)Call("ConfirmUnresponsiveWindow",999,false,now.AddSeconds(30)),"a continuously hung Roblox window is confirmed");
+  Assert(!(bool)Call("ConfirmUnresponsiveWindow",999,true,now.AddSeconds(31)) && !(bool)Call("ConfirmUnresponsiveWindow",999,false,now.AddSeconds(32)),"recovered window resets the hang confirmation timer");
+  var homeWindow=new RobloxWin { Pid=6804, Hwnd=new IntPtr(1), TrackerId=88, StartTime=now.AddMinutes(-3).ToLocalTime() };
+  var homeLog=new LogSessionInfo { TrackerId=88, Stage="LEFT_MAP", StageUpdatedAtUtc=now.AddMinutes(-2) };
+  Assert((bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,false),"confirmed leftover Home window is eligible without an account UserId");
+  homeLog.Stage="IN_GAME";
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"unidentified client in a game cannot be treated as a leftover Home window");
+  homeLog.Stage="TELEPORTING";
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"teleporting unidentified client cannot be closed by Home cleanup");
+  homeLog.Stage="INIT";
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"unknown or loading stage is not enough evidence for Home cleanup");
+  homeLog.Stage="APP_BOOT"; homeWindow.StartTime=now.AddSeconds(-30).ToLocalTime();
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,false),"automatic Home cleanup waits through startup grace");
+  homeWindow.StartTime=now.AddMinutes(-3).ToLocalTime(); homeLog.UserId=123;
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"Home cleanup does not act on accounts removed from Real");
+  homeLog.UserId=0; homeLog.TrackerId=99;
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"Home cleanup requires an exact tracker match");
+  homeLog.TrackerId=88; homeLog.StageUpdatedAtUtc=DateTime.MinValue;
+  Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"Home cleanup requires a timestamped app-session event");
+  count += GuardChecks.Run();
+  UiLayoutChecks.Run();
+  count += VisibilityChecks.Run();
+  count += AccountRejoinChecks.Run();
+  count += UpdateChecks.Run();
+  if(args.Length>0 && args[0]=="--real-preflight") {
+   long place; string server; RealAccountLauncher.ReadTarget(out place,out server);
+   Assert(place>0,"Real saved launch target readable");
+   WatchdogEngine.DiscoverAccountsFromEnvironment();
+   var account=WatchdogEngine.Accounts.Find(x=>x.UserId>0);
+   Assert(account!=null,"Real account inventory readable");
+   string cookie=RealAccountLauncher.ReadCookie(account.UserId);
+   Assert(cookie.StartsWith("_|WARNING:"),"Real DPAPI vault decrypts and authenticates in .NET");
+   var method=typeof(RealAccountLauncher).GetMethod("RequestTicket",BindingFlags.NonPublic|BindingFlags.Static);
+   string ticket=(string)method.Invoke(null,new object[]{cookie,place});
+   Assert(!string.IsNullOrEmpty(ticket),"Roblox accepted account and issued launch ticket (no game launched)");
+  }
+  Console.WriteLine(count+" checks passed");
+ }
+}

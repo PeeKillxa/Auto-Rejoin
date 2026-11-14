@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 
-BASE_URL = "https://raw.githubusercontent.com/PeeKillxa/Auto-Rejoin/main"
+BASE_URL = "https://raw.githubusercontent.com/PeeKillxa/Auto-Rejoin/main/Auto-Rejoin-Emu"
 ALLOWED_FILES = frozenset(
     {
         "watchdog.py",

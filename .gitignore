@@ -3,3 +3,15 @@
 *.pyo
 config.json
 username_cache.json
+*.pem
+*.pfx
+*.previous
+Auto-Rejoin-PC/*.exe
+Auto-Rejoin-PC/checks/runtime/
+Auto-Rejoin-PC/checks/previews/
+Auto-Rejoin-PC/checks/diagnostics/
+Auto-Rejoin-PC/dist/**/*.exe
+**/managed_sessions.json
+**/in_game_rejoin_settings.json
+**/crash.log
+**/rejoin.log*
