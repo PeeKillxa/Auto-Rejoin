@@ -8,6 +8,7 @@ exe = root / "NexusRobloxManager.exe"
 (stage / exe.name).write_bytes(exe.read_bytes())
 guide = stage / "START-HERE-TH.txt"
 text = guide.read_text(encoding="utf-8-sig").replace("14 พฤศจิกายน 2026", "15 พฤศจิกายน 2026")
+text = text.replace("ปิด Real แล้วกดปุ่มเวลาล็อกอิน Real ใน Nexus เลือกตั้งเป็น 15 นาที แล้วเปิด Real ใหม่เพื่อเพิ่มบัญชีตามเดิม", "กดปุ่มเวลาล็อกอิน Real ใน Nexus เลือกตั้งเป็น 15 นาที โปรแกรมจะปิด Real รวมโปรเซสค้างให้ก่อนปรับค่า แล้วเปิด Real ใหม่เพื่อเพิ่มบัญชีตามเดิม")
 if "ซ่อนจอหลัง Rejoin" not in text:
     text += "\nซ่อนจอหลัง Rejoin\nกดซ่อนทุกจอครั้งเดียวเพื่อซ่อนจากหน้าจอ Taskbar และ Alt+Tab พร้อมจำค่าซ่อนไปยังจอที่เปิดใหม่\nกดแสดงทุกจอหรือ F10 เพื่อแสดงกลับและยกเลิกโหมดซ่อนจอใหม่อัตโนมัติ\nเลือกแสดงเฉพาะบัญชีได้ โดยบัญชีอื่นยังคงซ่อนตามเดิม\n"
 guide.write_text(text, encoding="utf-8-sig")
@@ -19,6 +20,9 @@ if "เวลาล็อกอิน Real" not in text:
     guide.write_text(text, encoding="utf-8-sig")
 if "ฟีเจอร์เวลาล็อกอินยังเป็นรุ่นทดลอง" not in text:
     text += "\nฟีเจอร์เวลาล็อกอินยังเป็นรุ่นทดลอง: Windows Security บล็อกสำเนา Real ระหว่างทดสอบ จึงยังไม่ยืนยันการใช้กับไฟล์ที่ติดตั้งและการล็อกอินจริง\n"
+    guide.write_text(text, encoding="utf-8-sig")
+if "ปิด Real ให้หมด" not in text:
+    text += "\nปิด Real ให้หมด\nในหน้าเวลาล็อกอิน Real มีปุ่มปิด Real ให้หมด รวมโปรเซสที่ค้างใน Task Manager\nกดตั้งเวลา 15 นาทีหรือคืนค่า 2 นาทีแล้ว Nexus จะปิด Real และตรวจว่าปิดครบก่อนปรับไฟล์ให้เอง\nถ้า Real เปิดด้วยสิทธิ์แอดมิน Windows จะขออนุญาตปิดโปรเซส ต้องใช้บัญชี Windows เดียวกับ Nexus\nหากยกเลิกสิทธิ์หรือปิดไม่ครบ โปรแกรมจะแจ้งสถานะและยังไม่ปรับเวลา\n"
     guide.write_text(text, encoding="utf-8-sig")
 archive = root / "dist" / "NexusRobloxManager-Portable.zip"
 with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:

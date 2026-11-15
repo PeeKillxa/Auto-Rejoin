@@ -2194,6 +2194,7 @@ namespace NexusRobloxManager
         public static void Main(string[] args)
         {
             if (args.Length == 2 && args[0] == "--apply-update") { Environment.ExitCode = UpdateService.Apply(args[1]); return; }
+            if (args.Length == 2 && args[0] == "--close-real") { Environment.ExitCode = RealShutdownService.RunHelper(args[1]); return; }
             InstanceGate gate;
             if (!InstanceGate.TryAcquire(@"Local\NexusRobloxManager.Singleton.v1", out gate))
             {

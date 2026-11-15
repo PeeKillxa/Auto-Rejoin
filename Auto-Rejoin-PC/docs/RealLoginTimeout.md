@@ -2,7 +2,11 @@
 
 The **เวลาล็อกอิน Real** control changes the existing Roblox account browser-login wait from 2 to 15 minutes. It does not enter passwords, solve CAPTCHA, retrieve verification codes, or change account records. Complete login in Real normally.
 
-Close Real before applying the change. Nexus never closes Real or Roblox automatically for this operation. Use **คืนค่า 2 นาที** to restore the original executable. A different Real update is rejected until its executable is reviewed; do not copy patched Real binaries to other machines.
+The **ปิด Real ให้หมด** button closes the Real desktop and leftover Real backend processes. Setting 15 minutes or restoring 2 minutes runs the same shutdown automatically before changing the executable. It first requests a normal window close, then terminates remaining verified Real processes and checks fresh process inventories. It targets only versioned Real installation paths in the current Windows session. Roblox and unrelated processes are outside that scope.
+
+If Real requires administrator access, Windows displays its normal UAC consent prompt. Cancelling leaves the operation incomplete and prevents the timeout change. The helper must run as the same Windows user, returns a status without starting another manager, and the caller verifies the process inventory again. Failure, inaccessible process identity, or continuing respawn prevents a success report and the timeout change.
+
+Use **คืนค่า 2 นาที** to restore the original executable. A different Real update is rejected until its executable is reviewed; do not copy patched Real binaries to other machines.
 
 ## Reviewed artifact
 
