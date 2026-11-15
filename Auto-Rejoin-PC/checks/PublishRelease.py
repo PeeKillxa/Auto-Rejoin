@@ -33,11 +33,11 @@ asset = releases / ("NexusRobloxManager-" + options.version + ".exe")
 if asset.exists() and asset.read_bytes() != binary:
     raise SystemExit("This version already exists. Increase the version before publishing a changed binary.")
 asset.write_bytes(binary)
-for folder in ["src", "checks"]:
+for folder in ["src", "checks", "docs"]:
     destination = pc / folder
     destination.mkdir(exist_ok=True)
     for source in (root / folder).iterdir():
-        if source.is_file() and source.suffix in {".cs", ".ps1", ".py"}:
+        if source.is_file() and source.suffix in {".cs", ".ps1", ".py", ".md"}:
             shutil.copy2(source, destination / source.name)
 for name in ["Build.bat", "app.ico", "app.manifest"]:
     shutil.copy2(root / name, pc / name)

@@ -31,6 +31,9 @@ static class UiLayoutChecks
                 if (footer.Bottom > footer.Parent.ClientSize.Height || footer.Top < list.Bottom || list.Height < 60)
                     throw new Exception("Footer/list clipped at " + size);
                 if (footer.Controls.Count != 5) throw new Exception("Missing window actions");
+                Control[] loginButtons = form.Controls.Find("RealLoginTimeoutButton", true);
+                if (loginButtons.Length != 1 || loginButtons[0].Height < 30)
+                    throw new Exception("Real login timeout control is missing or clipped");
                 ListView grid=(ListView)list;
                 if(grid.Columns.Count!=7)throw new Exception("Per-account Rejoin column is missing");
                 AccountSlot account=WatchdogEngine.Accounts[0];

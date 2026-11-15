@@ -139,6 +139,7 @@ class RejoinChecks {
   count += VisibilityChecks.Run();
   count += AccountRejoinChecks.Run();
   count += UpdateChecks.Run();
+  count += RealLoginTimeoutChecks.Run();
   if(args.Length>0 && args[0]=="--real-preflight") {
    long place; string server; RealAccountLauncher.ReadTarget(out place,out server);
    Assert(place>0,"Real saved launch target readable");

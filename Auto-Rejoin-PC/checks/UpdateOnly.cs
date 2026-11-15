@@ -1,0 +1,1 @@
+using System;using System.IO;using NexusRobloxManager;class UpdateOnly{[STAThread]static void Main(){WatchdogEngine.DataDirectoryOverride=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"checks","runtime");Console.WriteLine(UpdateChecks.Run()+" updater checks passed");}}

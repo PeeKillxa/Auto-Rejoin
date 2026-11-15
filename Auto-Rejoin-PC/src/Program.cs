@@ -1267,7 +1267,7 @@ namespace NexusRobloxManager
             scroll.Controls.Add(tools);
             root.Controls.Add(scroll, 0, 1);
 
-            TableLayoutPanel hero = MakeTable(4, 29, 28, 25, 18);
+            TableLayoutPanel hero = MakeTable(5, 25, 24, 20, 15, 16);
             CyberButton arrange = LayoutButton("เรียงจอทันที  (F9)", Color.FromArgb(2, 132, 199), delegate { ArrangeAllNow(); });
             arrange.SubText = "วางทุกจอในตารางอัตโนมัติ";
             hero.Controls.Add(arrange, 0, 0);
@@ -1283,6 +1283,13 @@ namespace NexusRobloxManager
                 SetBanner("คืนขอบหน้าต่างให้ทุกจอแล้ว");
                 RefreshWindows(true);
             }), 3, 0);
+            CyberButton loginWait = LayoutButton("เวลาล็อกอิน Real", Color.FromArgb(51, 65, 85), delegate
+            {
+                using (RealLoginTimeoutForm dialog = new RealLoginTimeoutForm()) dialog.ShowDialog(this);
+            });
+            loginWait.Name = "RealLoginTimeoutButton";
+            loginWait.SubText = "ขยายเวลารอเป็น 15 นาที";
+            hero.Controls.Add(loginWait, 4, 0);
             tools.Controls.Add(hero, 0, 0);
 
             TableLayoutPanel middle = MakeTable(2, 65, 35);
