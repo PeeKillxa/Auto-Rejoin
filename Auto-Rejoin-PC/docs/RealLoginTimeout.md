@@ -26,3 +26,11 @@ An immutable verified original is retained in the current user's local Nexus dat
 ## Current validation limit
 
 The 32 isolated transaction checks pass. Windows Security quarantined an **unmodified** temporary copy of this Real executable as `Trojan:Win32/Egairtigado!rfn` before the real-file patch test could run. This is not evidence that the detection is a false positive. The installed original was left unchanged and its original hash verified. No Windows Security settings were changed. The feature is experimental; a successful installed-file patch and live login have not been established.
+
+## Security blocks
+
+When Windows reports `ERROR_VIRUS_INFECTED` (225 / `0x800700E1`) or `ERROR_VIRUS_DELETED` (226 / `0x800700E2`), Nexus records a small status marker for that exact reviewed build and pauses further timeout changes. It checks this before closing Real, so a known blocked attempt does not repeatedly close the app or create more blocked copies. The marker contains an error code and timestamp; it contains no executable or account data. A failure to save the marker still pauses retries in the current process.
+
+Read-only inspection can still show the original timeout, and **ปิด Real ให้หมด** remains available. The interface directs the user to Windows Security → Protection history for the detection details. Nexus does not change antivirus settings, restore quarantined files, or try another executable modification route. Staging cleanup is best effort and cannot hide the original error.
+
+The installed original in the reported incident still matched the reviewed SHA-256. Defender quarantined an unmodified backup staging file before executable replacement; the timeout stayed at 2 minutes.

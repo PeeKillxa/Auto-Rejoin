@@ -5,6 +5,6 @@ namespace NexusRobloxManager
 {
     public static class AppVersion
     {
-        public const string Value = "2.1.2.0";
+        public const string Value = "2.1.3.0";
     }
 }

@@ -24,6 +24,9 @@ if "ฟีเจอร์เวลาล็อกอินยังเป็น�
 if "ปิด Real ให้หมด" not in text:
     text += "\nปิด Real ให้หมด\nในหน้าเวลาล็อกอิน Real มีปุ่มปิด Real ให้หมด รวมโปรเซสที่ค้างใน Task Manager\nกดตั้งเวลา 15 นาทีหรือคืนค่า 2 นาทีแล้ว Nexus จะปิด Real และตรวจว่าปิดครบก่อนปรับไฟล์ให้เอง\nถ้า Real เปิดด้วยสิทธิ์แอดมิน Windows จะขออนุญาตปิดโปรเซส ต้องใช้บัญชี Windows เดียวกับ Nexus\nหากยกเลิกสิทธิ์หรือปิดไม่ครบ โปรแกรมจะแจ้งสถานะและยังไม่ปรับเวลา\n"
     guide.write_text(text, encoding="utf-8-sig")
+if "Windows Security บล็อกไฟล์ขณะปรับเวลา" not in text:
+    text += "\nWindows Security บล็อกไฟล์ขณะปรับเวลา\nNexus จะพักการปรับเวลาใน Real รุ่นนั้นไว้ ก่อนปิด Real หรือสร้างไฟล์ที่ถูกบล็อกซ้ำ\nปุ่มปิด Real ให้หมดยังใช้งานได้ ตรวจรายละเอียดได้ที่ Windows Security → Protection history\nไม่มีการเปลี่ยนการตั้งค่าป้องกันไวรัสหรือเรียกคืนไฟล์ที่ถูกกักกัน\n"
+    guide.write_text(text, encoding="utf-8-sig")
 archive = root / "dist" / "NexusRobloxManager-Portable.zip"
 with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
     for name in [exe.name, guide.name]:

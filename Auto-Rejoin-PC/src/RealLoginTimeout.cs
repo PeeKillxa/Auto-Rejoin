@@ -13,6 +13,7 @@ namespace NexusRobloxManager
         public string Path { get; internal set; }
         public int Minutes { get; internal set; }
         public string Version { get; internal set; }
+        public bool SecurityBlocked { get; internal set; }
         public bool IsExtended { get { return Minutes == 15; } }
         public string Description { get { return "Real " + Version + " · รอล็อกอิน Roblox " + Minutes + " นาที"; } }
     }
@@ -42,6 +43,13 @@ namespace NexusRobloxManager
         public static RealLoginTimeoutStatus ApplyInstalled(int minutes)
         {
             return ApplyFile(FindInstalled(), minutes);
+        }
+
+        public static void EnsureCanApplyInstalled()
+        {
+            Target target = FindInstalled();
+            RealLoginSecurity.ThrowIfBlocked(target.BackupRoot, target.ExpectedSha256);
+            InspectFile(target);
         }
 
         private static Target FindInstalled()
@@ -119,13 +127,20 @@ namespace NexusRobloxManager
 
         private static RealLoginTimeoutStatus Status(Target target, int minutes)
         {
-            return new RealLoginTimeoutStatus { Path = target.Path, Minutes = minutes, Version = target.Version };
+            return new RealLoginTimeoutStatus { Path = target.Path, Minutes = minutes, Version = target.Version,
+                SecurityBlocked = RealLoginSecurity.IsBlocked(target.BackupRoot, target.ExpectedSha256) };
         }
 
         internal static RealLoginTimeoutStatus InspectFile(Target target)
         {
             int minutes;
-            ReadVerified(target, out minutes);
+            try { ReadVerified(target, out minutes); }
+            catch (Exception failure)
+            {
+                RealLoginSecurityBlockedException blocked = RealLoginSecurity.RecordIfBlocked(target.BackupRoot, target.ExpectedSha256, failure);
+                if (blocked != null) throw blocked;
+                throw;
+            }
             return Status(target, minutes);
         }
 
@@ -164,7 +179,7 @@ namespace NexusRobloxManager
                 VerifyBackup(target, backup);
                 File.SetAttributes(backup, File.GetAttributes(backup) | FileAttributes.ReadOnly);
             }
-            finally { if (File.Exists(staging)) File.Delete(staging); }
+            finally { CleanStaging(staging); }
         }
 
         private static void RequireStopped(Target target)
@@ -184,7 +199,17 @@ namespace NexusRobloxManager
                     try { owns = mutex.WaitOne(0); }
                     catch (AbandonedMutexException) { owns = true; }
                     if (!owns) throw new InvalidOperationException("มีการปรับเวลาล็อกอิน Real อยู่แล้ว กรุณารอสักครู่");
-                    try { return ApplyLocked(target, minutes); }
+                    try
+                    {
+                        RealLoginSecurity.ThrowIfBlocked(target.BackupRoot, target.ExpectedSha256);
+                        return ApplyLocked(target, minutes);
+                    }
+                    catch (Exception failure)
+                    {
+                        RealLoginSecurityBlockedException blocked = RealLoginSecurity.RecordIfBlocked(target.BackupRoot, target.ExpectedSha256, failure);
+                        if (blocked != null) throw blocked;
+                        throw;
+                    }
                     finally { mutex.ReleaseMutex(); }
                 }
             }
@@ -248,7 +273,16 @@ namespace NexusRobloxManager
                 }
                 throw;
             }
-            finally { if (File.Exists(staging)) File.Delete(staging); }
+            finally { CleanStaging(staging); }
+        }
+
+        // Security software may quarantine or lock staging while a failure is unwinding.
+        // Cleanup must not replace the original security or transaction failure.
+        internal static void CleanStaging(string path)
+        {
+            try { if (File.Exists(path)) File.Delete(path); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
     }
 }

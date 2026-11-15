@@ -10,7 +10,7 @@ Push-Location $projectRoot
 try {
     & .\Build.bat $BuildOutput
     if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
-    & $compilerPath /nologo /target:exe "/out:$checkExe" "/r:$BuildOutput" /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll checks\RejoinChecks.cs checks\UiLayoutChecks.cs checks\GuardChecks.cs checks\VisibilityChecks.cs checks\AccountRejoinChecks.cs checks\UpdateChecks.cs checks\RealLoginTimeoutChecks.cs checks\RealProcessShutdownChecks.cs
+    & $compilerPath /nologo /target:exe "/out:$checkExe" "/r:$BuildOutput" /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll checks\RejoinChecks.cs checks\UiLayoutChecks.cs checks\GuardChecks.cs checks\VisibilityChecks.cs checks\AccountRejoinChecks.cs checks\UpdateChecks.cs checks\RealLoginTimeoutChecks.cs checks\RealProcessShutdownChecks.cs checks\SecurityBlockChecks.cs
     if ($LASTEXITCODE -ne 0) { throw 'Check compilation failed' }
     if ($RealPreflight) { & $checkExe --real-preflight } else { & $checkExe }
     if ($LASTEXITCODE -ne 0) { throw 'Rejoin checks failed' }

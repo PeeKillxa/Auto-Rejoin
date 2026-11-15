@@ -18,8 +18,8 @@ namespace NexusRobloxManager
             Text = "เวลาล็อกอิน Roblox ใน Real (ทดลอง)";
             AutoScaleDimensions = new SizeF(96, 96);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(640, 350);
-            MinimumSize = new Size(610, 380);
+            ClientSize = new Size(640, 390);
+            MinimumSize = new Size(610, 420);
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -85,7 +85,7 @@ namespace NexusRobloxManager
             note.Dock = DockStyle.Fill;
             note.TextAlign = ContentAlignment.MiddleLeft;
             note.Font = new Font(Font.FontFamily, 8.5f);
-            note.Text = "ถ้า Real ใช้สิทธิ์แอดมิน Windows จะขออนุญาตปิดโปรเซส\nการปรับเวลายังเป็นรุ่นทดลอง: Windows Security บล็อกสำเนา Real ในการทดสอบ";
+            note.Text = "ถ้า Real ใช้สิทธิ์แอดมิน Windows จะขออนุญาตปิดโปรเซส\nหาก Windows Security บล็อกไฟล์ จะพักการปรับเวลาใน Real รุ่นนั้น";
             layout.Controls.Add(note, 0, 4);
             CancelButton = close;
             Shown += delegate { RefreshStatus(); };
@@ -97,8 +97,11 @@ namespace NexusRobloxManager
             {
                 RealLoginTimeoutStatus current = RealLoginTimeout.InspectInstalled();
                 status.Text = "Real " + current.Version + "\nเวลารอปัจจุบัน: " + current.Minutes + " นาที";
-                extend.Enabled = current.Minutes != 15;
-                restore.Enabled = current.Minutes != 2;
+                if (current.SecurityBlocked)
+                    status.Text += "\nWindows Security บล็อกไฟล์ Real: พักการปรับเวลาในรุ่นนี้\nตรวจรายละเอียดได้ที่ Windows Security → Protection history";
+                extend.Enabled = !current.SecurityBlocked && current.Minutes != 15;
+                restore.Enabled = !current.SecurityBlocked && current.Minutes != 2;
+                extend.BackColor = current.SecurityBlocked ? Color.FromArgb(51, 65, 85) : Color.FromArgb(2, 132, 199);
             }
             catch (Exception ex)
             {
@@ -123,9 +126,12 @@ namespace NexusRobloxManager
             {
                 Exception failure = null;
                 bool stopped = false;
+                bool shutdownAttempted = false;
                 string resultMessage = "";
                 try
                 {
+                    if (minutes != 0) RealLoginTimeout.EnsureCanApplyInstalled();
+                    shutdownAttempted = true;
                     RealProcessShutdownResult result = RealShutdownService.CloseWithElevation();
                     if (!result.Success) throw new InvalidOperationException(result.Message);
                     stopped = true;
@@ -143,9 +149,11 @@ namespace NexusRobloxManager
                         RefreshStatus();
                         if (failure != null)
                         {
-                            string title = stopped ? "ปิด Real ครบแล้ว แต่ยังเปลี่ยนเวลาไม่ได้" : "ยังปิด Real ไม่ครบ";
-                            status.Text = title + "\n" + failure.Message;
-                            MessageBox.Show(this, status.Text, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            string title = failure is RealLoginSecurityBlockedException ? "Windows Security บล็อกการปรับเวลา" :
+                                !shutdownAttempted ? "ยังปรับเวลาล็อกอินไม่ได้" :
+                                stopped ? "ปิด Real ครบแล้ว แต่ยังเปลี่ยนเวลาไม่ได้" : "ยังปิด Real ไม่ครบ";
+                            if (!(failure is RealLoginSecurityBlockedException)) status.Text = title + "\n" + failure.Message;
+                            MessageBox.Show(this, title + "\n" + failure.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                         {
