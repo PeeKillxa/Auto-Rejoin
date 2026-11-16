@@ -1,63 +1,90 @@
 ﻿NEXUS ROBLOX MANAGER — เริ่มต้นใช้งาน
-รุ่นสำหรับส่งต่อ / สร้างวันที่ 15 พฤศจิกายน 2026
+รุ่นสำหรับ Roblox PC บน Windows 10/11
 
-ใน ZIP มีโปรแกรมและคู่มือ โปรแกรมใช้บัญชีและการตั้งค่า Real ของเครื่องเพื่อนเอง
+ใน ZIP มีโปรแกรมและคู่มือ ใช้บัญชีและการตั้งค่า Real ของเครื่องผู้ใช้เอง
 
-วิธีใช้
-1. ใช้ Windows 10 หรือ Windows 11 และติดตั้ง Real กับ Roblox บนเครื่องนั้นก่อน
-2. แตก ZIP ออกเป็นโฟลเดอร์ แล้วเปิด Real ด้วย Windows user ที่จะใช้รัน Nexus
-3. เพิ่มบัญชี Roblox ของตัวเองใน Real และกำหนดเกมใน Saved launch targets รายการแรก
-4. ใน Real เปิด Auto Inject / Auto Attach, All Instances และ Auto Execute
-   ปิด Auto Rejoin / Auto Relaunch ของ Real เพื่อให้ Nexus จัดการ rejoin ระบบเดียว
-5. เปิดบัญชีที่ต้องการเข้าเกมผ่าน Real ก่อนหนึ่งครั้ง และเปิด Real ค้างไว้
-6. เปิด NexusRobloxManager.exe แล้วเปิด Nexus Auto-Rejoin
+เริ่มใช้งาน
+1. ติดตั้ง Real และ Roblox ใช้ Windows user เดียวกับที่จะเปิด Nexus
+2. ตั้งค่า Real และคลังบัญชีให้พร้อม กำหนดเกมใน Saved launch targets รายการแรก
+3. เปิด Auto Inject / Auto Attach, All Instances และ Auto Execute ใน Real
+   ปิด Auto Rejoin / Auto Relaunch ของ Real เพื่อให้ Nexus จัดการ rejoin
+4. เปิดบัญชีเข้าเกมผ่าน Real ก่อนหนึ่งครั้ง แล้วเปิด Nexus Auto-Rejoin
+
+ล็อกอิน Roblox ผ่าน Nexus · รอ 15 นาที
+กด บัญชี Roblox → เพิ่มบัญชี Roblox · รอ 15 นาที
+กรอกชื่อผู้ใช้ รหัสผ่าน CAPTCHA และรหัส 2 ชั้นบนหน้าเว็บไซต์ Roblox ตามปกติ
+เมื่อยืนยันสำเร็จ ตรวจชื่อบัญชีและ User ID แล้วกด เพิ่มบัญชีนี้เข้า Real
+Nexus จะตรวจบัญชีอีกครั้ง ปิด Real ชั่วคราว และนำเข้าบัญชีที่เลือก
+จากนั้นเปิด Real เพื่อดูบัญชีและเปิดเกมตามเดิม
+รองรับ Real 3.1.1 แบบ device vault ของ Windows user เดียวกัน
+คลังแบบใส่รหัสผ่านหรือ Real รุ่นอื่นยังไม่รองรับ มีสำรองข้อมูลเดิมแบบเข้ารหัสก่อนนำเข้า
+เป็นส่วนเชื่อมต่อข้อมูลในเครื่องของ Nexus ต้องตรวจบัญชีจริงใน Real หลังนำเข้าครั้งแรก
+
+ปิด Real ให้หมด
+ในหน้าบัญชี Roblox มีปุ่มปิด Real ให้หมด รวมโปรเซสค้างใน Task Manager
+หาก Real ใช้สิทธิ์แอดมิน Windows จะขออนุญาต ต้องใช้ Windows user เดียวกับ Nexus
+การนำเข้าจะตรวจว่าปิดครบก่อนเขียนข้อมูล
 
 ปุ่มหลัก
 F9 = จัดเรียงหน้าต่าง Roblox
 F10 = ซ่อน / แสดงหน้าต่าง
-Rejoin จอที่เลือก = ปิดโปรเซสเก่าของบัญชีนั้น รอยืนยันว่าปิดแล้ว แล้วจึงเปิดใหม่
-Rejoin ทุกจอ = เข้าคิวเปิดใหม่ทุกบัญชีที่ติดตามอยู่
-
-ข้อมูลและข้อจำกัด
-- ไม่ต้องวางไฟล์ไว้ในพาธเดิมของผู้ส่ง ไม่ต้องคัดลอกโฟลเดอร์ Real ของผู้ส่ง
-- การตั้งค่าและ log อยู่ใน %APPDATA%\NexusRobloxManager ของแต่ละเครื่อง
-- อ่านบัญชีจาก %LOCALAPPDATA%\Real\data\accounts.json ของเครื่องนั้น
-- บัญชีที่ลบจาก Real จะถูกยกเลิกคิวและลืมข้อมูลใน Nexus
-- ใช้ Saved launch targets รายการแรกของ Real; server ว่างหรือเป็น Job ID ได้
-  ลิงก์เชิญ private server / share link ยังไม่รองรับ
-- รองรับรูปแบบบัญชี Real แบบ dev:v1 และ plaintext ของรุ่นที่ตรวจสอบแล้ว
-  รูปแบบ vault ที่ป้องกันด้วยรหัสผ่านยังไม่รองรับ
-- เปิด Nexus ได้หนึ่งตัวต่อ Windows session; เปิดซ้ำจะเรียกตัวเดิมขึ้นมา
-- หากไม่พบบัญชี ให้เปิดบัญชีผ่าน Real ก่อน และตรวจว่าใช้ Windows user เดียวกัน
+Rejoin จอที่เลือก = ปิดโปรเซสเก่า รอยืนยันว่าปิดแล้ว แล้วจึงเปิดใหม่
+Rejoin ทุกจอ = เข้าคิวเปิดใหม่ตามบัญชีที่เปิด Auto Rejoin
 
 ซ่อนจอหลัง Rejoin
-กดซ่อนทุกจอครั้งเดียวเพื่อซ่อนจากหน้าจอ Taskbar และ Alt+Tab พร้อมจำค่าซ่อนไปยังจอที่เปิดใหม่
-กดแสดงทุกจอหรือ F10 เพื่อแสดงกลับและยกเลิกโหมดซ่อนจอใหม่อัตโนมัติ
-เลือกแสดงเฉพาะบัญชีได้ โดยบัญชีอื่นยังคงซ่อนตามเดิม
-
-อัปเดตจาก GitHub
-เวอร์ชันนี้เป็นรุ่นเริ่มต้นที่มีระบบอัปเดตในตัว เพื่อนต้องลงรุ่นนี้ครั้งเดียว
-หลังจากนั้นโปรแกรมตรวจเวอร์ชันใหม่ตอนเปิดและทุก 30 นาที หรือกดปุ่มตรวจอัปเดตด้านบนได้
-การติดตั้งอัปเดตจะรอให้ Nexus ปิดก่อนแทนไฟล์ เก็บไฟล์เก่าไว้ และคงการตั้งค่าเดิม
+กดซ่อนทุกจอเพื่อซ่อนจากหน้าจอ Taskbar และ Alt+Tab พร้อมจำค่าไปยังจอที่เปิดใหม่
+กดแสดงทุกจอหรือ F10 เพื่อแสดงกลับ เลือกแสดงเฉพาะบัญชีได้
 
 เปิด-ปิด Auto Rejoin รายบัญชี
-คลิกคอลัมน์ Auto Rejoin ที่แถวบัญชีเพื่อสลับ ON/OFF หรือคลิกขวาเลือกเปิด/ปิดบัญชีที่เลือก
-การปิดจะยกเลิกคิวของบัญชีนั้น และไม่เปลี่ยนบัญชีอื่น ค่าจะจำไว้แม้ปิดเปิดโปรแกรมใหม่
+คลิกคอลัมน์ Auto Rejoin หรือเลือกหลายแถวแล้วคลิกขวาเปิด/ปิด
+การปิดจะยกเลิกคิวของบัญชีนั้น ค่าจะจำไว้หลังเปิดโปรแกรมใหม่
+บัญชีที่ลบจาก Real จะถูกยกเลิกคิวและลืมข้อมูลใน Nexus
 
-เวลาล็อกอิน Real
-กดปุ่มเวลาล็อกอิน Real ใน Nexus เลือกตั้งเป็น 15 นาที โปรแกรมจะปิด Real รวมโปรเซสค้างให้ก่อนปรับค่า แล้วเปิด Real ใหม่เพื่อเพิ่มบัญชีตามเดิม
-รองรับเฉพาะไฟล์ Real 3.1.1 ที่ตรวจสอบแล้ว มีปุ่มคืนค่า 2 นาทีและเก็บไฟล์สำรองไว้ในเครื่อง
-CAPTCHA และรหัส 2 ชั้นยังกรอกตามปกติ เมื่อ Real อัปเดต โปรแกรมจะตรวจรุ่นอีกครั้งก่อนแก้ไฟล์
+อัปเดตจาก GitHub
+โปรแกรมตรวจอัปเดตตอนเปิดและทุก 30 นาที หรือกดตรวจอัปเดตด้านบน
+การติดตั้งรอ Nexus เดิมปิด เก็บไฟล์เก่าและคงการตั้งค่าเดิม
+เพื่อนที่ใช้รุ่นไม่มี updater ต้องลงแพ็กเกจนี้ครั้งเดียว
 
-ฟีเจอร์เวลาล็อกอินยังเป็นรุ่นทดลอง: Windows Security บล็อกสำเนา Real ระหว่างทดสอบ จึงยังไม่ยืนยันการใช้กับไฟล์ที่ติดตั้งและการล็อกอินจริง
+ข้อมูลและข้อจำกัด
+การตั้งค่าและ log อยู่ใน AppData ของ Windows user แต่ละเครื่อง
+ใช้ Saved launch targets รายการแรก server ว่างหรือเป็น Job ID ได้
+ลิงก์เชิญ private server / share link ยังไม่รองรับ
+การอ่านบัญชีรองรับ dev:v1 และ plaintext ของรุ่นที่ตรวจสอบแล้ว
+ตัวเบราว์เซอร์ใช้ Microsoft Edge WebView2 Runtime ที่ติดตั้งใน Windows
+หากเครื่องไม่มี Runtime หน้าล็อกอินจะแสดงลิงก์ดาวน์โหลดของ Microsoft
 
-ปิด Real ให้หมด
-ในหน้าเวลาล็อกอิน Real มีปุ่มปิด Real ให้หมด รวมโปรเซสที่ค้างใน Task Manager
-กดตั้งเวลา 15 นาทีหรือคืนค่า 2 นาทีแล้ว Nexus จะปิด Real และตรวจว่าปิดครบก่อนปรับไฟล์ให้เอง
-ถ้า Real เปิดด้วยสิทธิ์แอดมิน Windows จะขออนุญาตปิดโปรเซส ต้องใช้บัญชี Windows เดียวกับ Nexus
-หากยกเลิกสิทธิ์หรือปิดไม่ครบ โปรแกรมจะแจ้งสถานะและยังไม่ปรับเวลา
+ตัวปรับเวลาเดิมของ Real (ทดลอง)
+เข้าทาง บัญชี Roblox → ตัวปรับเวลาเดิมของ Real
+Windows Security บล็อกไฟล์ขณะปรับเวลา: Nexus จะพักวิธีนี้ใน Real รุ่นที่ถูกบล็อก
+ตรวจรายละเอียดได้ที่ Windows Security → Protection history
+ฟีเจอร์เวลาล็อกอินยังเป็นรุ่นทดลองสำหรับวิธีแก้ไฟล์เดิม หน้าล็อกอิน Nexus ใช้เบราว์เซอร์แยก
 
-Windows Security บล็อกไฟล์ขณะปรับเวลา
-Nexus จะพักการปรับเวลาใน Real รุ่นนั้นไว้ ก่อนปิด Real หรือสร้างไฟล์ที่ถูกบล็อกซ้ำ
-ปุ่มปิด Real ให้หมดยังใช้งานได้ ตรวจรายละเอียดได้ที่ Windows Security → Protection history
-ไม่มีการเปลี่ยนการตั้งค่าป้องกันไวรัสหรือเรียกคืนไฟล์ที่ถูกกักกัน
+
+Microsoft WebView2 SDK license
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * The name of Microsoft Corporation, or the names of its contributors 
+may not be used to endorse or promote products derived from this
+software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

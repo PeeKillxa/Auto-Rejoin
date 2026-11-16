@@ -18,6 +18,7 @@ class RejoinChecks {
    return;
   }
   WatchdogEngine.DataDirectoryOverride=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"checks","runtime");
+  WebViewRuntime.Register();
   Program.WriteDiagnostic("portable-path-check\n");
   string diagnosticPath=System.IO.Path.Combine(WatchdogEngine.DataDir,"crash.log");
   Assert(System.IO.File.ReadAllText(diagnosticPath).Contains("portable-path-check"),"diagnostics use the current user's data directory instead of the developer's workspace");
@@ -142,6 +143,8 @@ class RejoinChecks {
   count += RealLoginTimeoutChecks.Run();
   count += RealProcessShutdownChecks.Run();
   count += SecurityBlockChecks.Run();
+  count += RealAccountImportChecks.Run();
+  count += BrowserLoginChecks.Run();
   if(args.Length>0 && args[0]=="--real-preflight") {
    long place; string server; RealAccountLauncher.ReadTarget(out place,out server);
    Assert(place>0,"Real saved launch target readable");

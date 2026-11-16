@@ -188,6 +188,8 @@ namespace NexusRobloxManager
         [DllImport("bcrypt.dll")]
         private static extern int BCryptDecrypt(IntPtr key, byte[] input, int inputLength, ref AuthInfo padding, IntPtr iv, int ivLength, byte[] output, int outputLength, out int resultLength, int flags);
         [DllImport("bcrypt.dll")]
+        private static extern int BCryptEncrypt(IntPtr key, byte[] input, int inputLength, ref AuthInfo padding, IntPtr iv, int ivLength, byte[] output, int outputLength, out int resultLength, int flags);
+        [DllImport("bcrypt.dll")]
         private static extern int BCryptDestroyKey(IntPtr key);
         [DllImport("bcrypt.dll")]
         private static extern int BCryptCloseAlgorithmProvider(IntPtr algorithm, int flags);
@@ -220,6 +222,41 @@ namespace NexusRobloxManager
             catch { Array.Clear(output, 0, output.Length); throw; }
             finally
             {
+                if (key != IntPtr.Zero) BCryptDestroyKey(key);
+                if (algorithm != IntPtr.Zero) BCryptCloseAlgorithmProvider(algorithm, 0);
+                tagHandle.Free(); nonceHandle.Free();
+            }
+        }
+
+        public static byte[] EncryptGcm(byte[] secret, byte[] nonce, byte[] plain)
+        {
+            if (secret == null || nonce == null || plain == null || secret.Length != 32 || nonce.Length != 12)
+                throw new CryptographicException("Invalid Real vault payload");
+            IntPtr algorithm = IntPtr.Zero, key = IntPtr.Zero;
+            byte[] tag = new byte[16], output = new byte[plain.Length];
+            GCHandle nonceHandle = GCHandle.Alloc(nonce, GCHandleType.Pinned);
+            GCHandle tagHandle = GCHandle.Alloc(tag, GCHandleType.Pinned);
+            try
+            {
+                Check(BCryptOpenAlgorithmProvider(out algorithm, "AES", null, 0));
+                byte[] mode = Encoding.Unicode.GetBytes("ChainingModeGCM\0");
+                Check(BCryptSetProperty(algorithm, "ChainingMode", mode, mode.Length, 0));
+                Check(BCryptGenerateSymmetricKey(algorithm, out key, IntPtr.Zero, 0, secret, secret.Length, 0));
+                AuthInfo info = new AuthInfo();
+                info.Size = Marshal.SizeOf(typeof(AuthInfo)); info.Version = 1;
+                info.Nonce = nonceHandle.AddrOfPinnedObject(); info.NonceLength = nonce.Length;
+                info.Tag = tagHandle.AddrOfPinnedObject(); info.TagLength = tag.Length;
+                int length;
+                Check(BCryptEncrypt(key, plain, plain.Length, ref info, IntPtr.Zero, 0, output, output.Length, out length, 0));
+                if (length != output.Length) throw new CryptographicException("Invalid Real vault payload");
+                byte[] combined = new byte[output.Length + tag.Length];
+                Buffer.BlockCopy(output, 0, combined, 0, output.Length);
+                Buffer.BlockCopy(tag, 0, combined, output.Length, tag.Length);
+                return combined;
+            }
+            finally
+            {
+                Array.Clear(output, 0, output.Length); Array.Clear(tag, 0, tag.Length);
                 if (key != IntPtr.Zero) BCryptDestroyKey(key);
                 if (algorithm != IntPtr.Zero) BCryptCloseAlgorithmProvider(algorithm, 0);
                 tagHandle.Free(); nonceHandle.Free();

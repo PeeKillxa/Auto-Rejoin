@@ -33,14 +33,15 @@ asset = releases / ("NexusRobloxManager-" + options.version + ".exe")
 if asset.exists() and asset.read_bytes() != binary:
     raise SystemExit("This version already exists. Increase the version before publishing a changed binary.")
 asset.write_bytes(binary)
-for folder in ["src", "checks", "docs"]:
+for folder in ["src", "checks", "docs", "tools"]:
     destination = pc / folder
     destination.mkdir(exist_ok=True)
     for source in (root / folder).iterdir():
-        if source.is_file() and source.suffix in {".cs", ".ps1", ".py", ".md"}:
+        if source.is_file() and source.suffix in {".cs", ".ps1", ".py", ".md", ".txt"}:
             shutil.copy2(source, destination / source.name)
 for name in ["Build.bat", "app.ico", "app.manifest"]:
     shutil.copy2(root / name, pc / name)
+shutil.copytree(root / "lib" / "WebView2", pc / "lib" / "WebView2", dirs_exist_ok=True)
 shutil.copy2(root / "dist/NexusRobloxManager-Portable.zip", pc / "NexusRobloxManager-Portable.zip")
 guide = pc / "dist/NexusRobloxManager-Portable"
 guide.mkdir(parents=True, exist_ok=True)

@@ -1283,12 +1283,12 @@ namespace NexusRobloxManager
                 SetBanner("คืนขอบหน้าต่างให้ทุกจอแล้ว");
                 RefreshWindows(true);
             }), 3, 0);
-            CyberButton loginWait = LayoutButton("เวลาล็อกอิน Real", Color.FromArgb(51, 65, 85), delegate
+            CyberButton loginWait = LayoutButton("บัญชี Roblox", Color.FromArgb(51, 65, 85), delegate
             {
-                using (RealLoginTimeoutForm dialog = new RealLoginTimeoutForm()) dialog.ShowDialog(this);
+                using (RobloxAccountsForm dialog = new RobloxAccountsForm()) dialog.ShowDialog(this);
             });
             loginWait.Name = "RealLoginTimeoutButton";
-            loginWait.SubText = "ขยายเวลารอเป็น 15 นาที";
+            loginWait.SubText = "เพิ่มบัญชี / ปิด Real";
             hero.Controls.Add(loginWait, 4, 0);
             tools.Controls.Add(hero, 0, 0);
 
@@ -2195,6 +2195,15 @@ namespace NexusRobloxManager
         {
             if (args.Length == 2 && args[0] == "--apply-update") { Environment.ExitCode = UpdateService.Apply(args[1]); return; }
             if (args.Length == 2 && args[0] == "--close-real") { Environment.ExitCode = RealShutdownService.RunHelper(args[1]); return; }
+            WebViewRuntime.Register();
+            if (args.Length == 1 && args[0] == "--add-account")
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new RobloxAccountsForm());
+                WebViewRuntime.DrainProfileCleanup();
+                return;
+            }
             InstanceGate gate;
             if (!InstanceGate.TryAcquire(@"Local\NexusRobloxManager.Singleton.v1", out gate))
             {
@@ -2237,6 +2246,7 @@ namespace NexusRobloxManager
                 }
                 WriteDiagnostic("[Main] " + DateTime.Now.ToString("HH:mm:ss") + " Starting form...\r\n");
                 Application.Run(form);
+                WebViewRuntime.DrainProfileCleanup();
                 WriteDiagnostic("[Exit] " + DateTime.Now.ToString("HH:mm:ss") + " Application.Run returned normally\r\n");
             }
             catch (Exception ex)
