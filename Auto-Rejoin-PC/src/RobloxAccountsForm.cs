@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace NexusRobloxManager
@@ -59,11 +60,7 @@ namespace NexusRobloxManager
             login.Name = "OpenRobloxLoginButton";
             shutdown.Text = "ปิด Real ให้หมด";
             shutdown.Name = "CloseAllRealButton";
-            login.Click += delegate
-            {
-                WebViewRuntime.Register();
-                using (RobloxLoginForm browser = new RobloxLoginForm(ImportAccount)) browser.ShowDialog(this);
-            };
+            login.Click += async delegate { await OpenLogin(); };
             shutdown.Click += delegate { CloseReal(); };
             Style(login, Color.FromArgb(2, 132, 199));
             Style(shutdown, Color.FromArgb(146, 64, 14));
@@ -98,6 +95,32 @@ namespace NexusRobloxManager
             button.BackColor = color;
             button.ForeColor = Color.White;
             button.Margin = new Padding(3, 5, 3, 2);
+        }
+
+        private async Task OpenLogin()
+        {
+            if (busy) return;
+            string previousStatus = status.Text;
+            busy = true;
+            login.Enabled = shutdown.Enabled = dismiss.Enabled = false;
+            status.Text = "กำลังตรวจคลังบัญชี Real...";
+            try
+            {
+                await Task.Run((Action)RealAccountImport.EnsureCanImport);
+                if (IsDisposed) return;
+                status.Text = previousStatus;
+                WebViewRuntime.Register();
+                using (RobloxLoginForm browser = new RobloxLoginForm(ImportAccount)) browser.ShowDialog(this);
+            }
+            catch (Exception error)
+            {
+                if (!IsDisposed) status.Text = "ยังเปิดล็อกอินเพื่อนำเข้าบัญชีไม่ได้\n" + error.Message;
+            }
+            finally
+            {
+                busy = false;
+                if (!IsDisposed) login.Enabled = shutdown.Enabled = dismiss.Enabled = true;
+            }
         }
 
         private static string ImportAccount(RobloxLoginAccount account)

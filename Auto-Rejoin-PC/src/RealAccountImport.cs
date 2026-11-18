@@ -85,8 +85,8 @@ namespace NexusRobloxManager
         internal static void ValidateInstalledVersion(Version version)
         {
             if (version == null) throw new InvalidOperationException("ไม่พบรุ่น Real ที่ติดตั้ง จึงยังนำเข้าบัญชีไม่ได้");
-            if (version != new Version(3, 1, 1))
-                throw new InvalidOperationException("การนำเข้าบัญชียังรองรับเฉพาะ Real 3.1.1 · พบรุ่น " + version + " กรุณารอ Nexus รุ่นที่รองรับ");
+            if (version != new Version(3, 1, 1) && version != new Version(3, 2, 1))
+                throw new InvalidOperationException("การนำเข้าบัญชีรองรับ Real 3.1.1 และ 3.2.1 · พบรุ่น " + version + " กรุณารอ Nexus รุ่นที่รองรับ");
         }
 
         public static void EnsureCanImport()

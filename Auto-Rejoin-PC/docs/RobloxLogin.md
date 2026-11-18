@@ -1,10 +1,10 @@
 # Roblox login in Nexus
 
-Open **บัญชี Roblox → เพิ่มบัญชี Roblox · รอ 15 นาที**. Complete the normal Roblox website login, CAPTCHA and two-step verification in the embedded browser. Nexus waits up to 15 minutes; it does not solve challenges or retrieve codes.
+Open **บัญชี Roblox → เพิ่มบัญชี Roblox · รอ 15 นาที**. Nexus checks the installed Real account store before opening the sign-in page. Complete the normal Roblox website login, CAPTCHA and two-step verification in the embedded browser. Nexus waits up to 15 minutes; it does not solve challenges or retrieve codes.
 
 After Roblox confirms the session, Nexus shows the username, display name and user ID. Review them and click **เพิ่มบัญชีนี้เข้า Real**. Only this click starts import. Nexus checks the session with Roblox again, checks that the local Real data can be read, closes Real, and merges the reviewed account. Open Real afterwards to see the account and launch games normally.
 
-This is Nexus's compatible local-data integration, not an official external Real import API. It supports the reviewed Real 3.1.1 device vault on the same Windows account. Password-protected vault modes, unknown account formats and other installed Real versions are refused. Read-only preflight on the development machine passed; automated tests use synthetic account data. Successful login and recognition of an imported live account by Real remain manual verification steps.
+Nexus integrates with the local Real 3.1.1 and 3.2.1 device vault on the same Windows account. The importer requires a supported release and vault format. Read-only preflight passed on installed Real 3.2.1. Automated import tests use synthetic account data, and recognition of an imported live account by Real remains a manual verification step.
 
 ## Data handling
 

@@ -62,9 +62,11 @@ static class RealAccountImportChecks
     {
         count = 0;
         RealAccountImport.ValidateInstalledVersion(new Version(3, 1, 1));
-        Assert(true, "local account integration accepts the reviewed Real 3.1.1 installation version");
+        RealAccountImport.ValidateInstalledVersion(new Version(3, 2, 1));
+        Assert(true, "local account integration accepts reviewed Real 3.1.1 and 3.2.1 installations");
         Assert(Reject(delegate { RealAccountImport.ValidateInstalledVersion(new Version(3, 1, 0)); }) &&
             Reject(delegate { RealAccountImport.ValidateInstalledVersion(new Version(3, 2, 0)); }) &&
+            Reject(delegate { RealAccountImport.ValidateInstalledVersion(new Version(3, 2, 2)); }) &&
             Reject(delegate { RealAccountImport.ValidateInstalledVersion(null); }),
             "older, future, and missing Real installation versions cannot use the local integration");
         byte[] key = Convert.FromBase64String("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="), nonce = Convert.FromBase64String("AAECAwQFBgcICQoL");
