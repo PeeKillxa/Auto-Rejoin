@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -135,6 +136,7 @@ class RejoinChecks {
   Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"Home cleanup requires an exact tracker match");
   homeLog.TrackerId=88; homeLog.StageUpdatedAtUtc=DateTime.MinValue;
   Assert(!(bool)Call("IsUnmappedHomeWindow",homeWindow,homeLog,now,true),"Home cleanup requires a timestamped app-session event");
+  CheckTrackerStartupWait(now);
   count += GuardChecks.Run();
   UiLayoutChecks.Run();
   count += VisibilityChecks.Run();
@@ -158,5 +160,61 @@ class RejoinChecks {
    Assert(!string.IsNullOrEmpty(ticket),"Roblox accepted account and issued launch ticket (no game launched)");
   }
   Console.WriteLine(count+" checks passed");
+ }
+
+ static void CheckTrackerStartupWait(DateTime now)
+ {
+  string previousDirectory = WatchdogEngine.DataDirectoryOverride;
+  int previousWait = WatchdogEngine.TrackerStartupWaitSec;
+  int previousUiTimeout = WatchdogEngine.UiTimeoutSec;
+  long previousTarget = WatchdogEngine.TargetPlaceId;
+  bool previousEnabled = WatchdogEngine.WatchdogEnabled;
+  bool previousHide = WatchdogEngine.HideNewClients;
+  string fixtureDirectory = Path.Combine(WatchdogEngine.DataDir, "tracker-wait-" + Guid.NewGuid().ToString("N"));
+  WatchdogEngine.DataDirectoryOverride = fixtureDirectory;
+  string path = WatchdogEngine.SettingsFilePath;
+  try
+  {
+   File.WriteAllText(path, "{\"UiTimeoutSec\":90,\"TargetPlaceId\":321,\"WatchdogEnabled\":false,\"HideNewClients\":true}");
+   WatchdogEngine.LoadSettings();
+   Assert(WatchdogEngine.TrackerStartupWaitSec == 180, "old settings get the new three-minute tracker startup wait");
+   File.WriteAllText(path, "{\"UiTimeoutSec\":240,\"TargetPlaceId\":321,\"WatchdogEnabled\":false,\"HideNewClients\":true}");
+   WatchdogEngine.LoadSettings();
+   Assert(WatchdogEngine.TrackerStartupWaitSec == 240, "a longer existing startup wait is preserved on upgrade");
+
+   var window = new RobloxWin { Pid = 6804, Hwnd = new IntPtr(1), TrackerId = 88, StartTime = now.AddSeconds(-250).ToLocalTime() };
+   var log = new LogSessionInfo { TrackerId = 88, Stage = "APP_BOOT", StageUpdatedAtUtc = now.AddSeconds(-30) };
+   Assert((bool)Call("IsUnmappedHomeWindow", window, log, now, false), "a Home window is eligible after its initial wait");
+   Assert(WatchdogEngine.TrySetTrackerStartupWait(300), "a longer tracker wait saves successfully");
+   Assert(!(bool)Call("IsUnmappedHomeWindow", window, log, now, false) &&
+          (bool)Call("IsUnmappedHomeWindow", window, log, now.AddSeconds(50), false),
+          "increasing the tracker wait protects a window that is still starting until the new deadline");
+   log.Stage = "LEFT_MAP";
+   Assert((bool)Call("IsUnmappedHomeWindow", window, log, now, false), "a confirmed return from a game uses the existing Home cleanup delay");
+
+   string saved = File.ReadAllText(path);
+   Assert(!WatchdogEngine.TrySetTrackerStartupWait(0) && !WatchdogEngine.TrySetTrackerStartupWait(901) && File.ReadAllText(path) == saved,
+          "a tracker wait outside the supported range cannot change the saved settings");
+   using (var lockedFile = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+    Assert(!WatchdogEngine.TrySetTrackerStartupWait(420) && WatchdogEngine.TrackerStartupWaitSec == 300,
+           "a failed save leaves the active tracker wait unchanged");
+   Assert(WatchdogEngine.TrySetTrackerStartupWait(600), "the tracker wait remains adjustable after a save failure");
+   File.WriteAllText(path, saved);
+   WatchdogEngine.LoadSettings();
+   Assert(WatchdogEngine.TrackerStartupWaitSec == 300 && WatchdogEngine.UiTimeoutSec == 240 &&
+          WatchdogEngine.TargetPlaceId == 321 && !WatchdogEngine.WatchdogEnabled && WatchdogEngine.HideNewClients,
+          "reloading restores the chosen wait and retains the other settings");
+  }
+  finally
+  {
+   WatchdogEngine.TrySetTrackerStartupWait(previousWait);
+   WatchdogEngine.DataDirectoryOverride = previousDirectory;
+   WatchdogEngine.UiTimeoutSec = previousUiTimeout;
+   WatchdogEngine.TargetPlaceId = previousTarget;
+   WatchdogEngine.WatchdogEnabled = previousEnabled;
+   WatchdogEngine.HideNewClients = previousHide;
+   File.Delete(path);
+   Directory.Delete(fixtureDirectory);
+  }
  }
 }

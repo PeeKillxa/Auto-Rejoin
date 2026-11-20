@@ -1377,7 +1377,7 @@ namespace NexusRobloxManager
             tools.Controls.Add(middle, 0, 1);
             UpdateModeButtonStyles();
 
-            TableLayoutPanel rejoin = MakeTable(4, 32, 25, 24, 19);
+            TableLayoutPanel rejoin = MakeTable(5, 25, 20, 15, 23, 17);
             rejoin.BackColor = Color.FromArgb(14, 22, 36);
             rejoin.Margin = new Padding(4, 4, 4, 2);
             btnWatchdogToggle = LayoutButton("Auto-Rejoin", Color.FromArgb(5, 150, 105), delegate
@@ -1403,8 +1403,39 @@ namespace NexusRobloxManager
             txtTargetPlaceId.BorderStyle = BorderStyle.FixedSingle;
             target.Controls.Add(txtTargetPlaceId, 0, 1);
             rejoin.Controls.Add(target, 1, 0);
-            rejoin.Controls.Add(LayoutButton("Rejoin จอที่เลือก", Color.FromArgb(2, 132, 199), delegate { ForceRestartSelected(); }), 2, 0);
-            rejoin.Controls.Add(LayoutButton("Rejoin ทุกจอ", Color.FromArgb(180, 83, 9), delegate { WatchdogEngine.KillRobloxAll(windows); }), 3, 0);
+            TableLayoutPanel trackerWait = MakeTable(1, 100);
+            trackerWait.RowStyles.Clear();
+            trackerWait.Margin = new Padding(8, 3, 8, 3);
+            trackerWait.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
+            trackerWait.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
+            trackerWait.Controls.Add(MakeLabel("รอ Tracker (วินาที)", false), 0, 0);
+            NumericUpDown startupWaitSeconds = new NumericUpDown();
+            startupWaitSeconds.Name = "TrackerStartupWait";
+            startupWaitSeconds.AccessibleName = "รอ Tracker (วินาที)";
+            startupWaitSeconds.Minimum = WatchdogEngine.MinTrackerStartupWaitSec;
+            startupWaitSeconds.Maximum = WatchdogEngine.MaxTrackerStartupWaitSec;
+            startupWaitSeconds.Increment = 30;
+            startupWaitSeconds.Value = WatchdogEngine.TrackerStartupWaitSec;
+            startupWaitSeconds.BackColor = Color.FromArgb(30, 41, 59);
+            startupWaitSeconds.ForeColor = Color.White;
+            startupWaitSeconds.Dock = DockStyle.Fill;
+            startupWaitSeconds.Margin = Padding.Empty;
+            startupWaitSeconds.ValueChanged += delegate
+            {
+                int seconds = (int)startupWaitSeconds.Value;
+                if (seconds == WatchdogEngine.TrackerStartupWaitSec) return;
+                if (WatchdogEngine.TrySetTrackerStartupWait(seconds))
+                    SetBanner("บันทึกเวลารอ Tracker เป็น " + seconds + " วินาทีแล้ว");
+                else
+                {
+                    startupWaitSeconds.Value = WatchdogEngine.TrackerStartupWaitSec;
+                    SetBanner("บันทึกเวลารอ Tracker ไม่สำเร็จ ใช้ค่าเดิมอยู่");
+                }
+            };
+            trackerWait.Controls.Add(startupWaitSeconds, 0, 1);
+            rejoin.Controls.Add(trackerWait, 2, 0);
+            rejoin.Controls.Add(LayoutButton("Rejoin จอที่เลือก", Color.FromArgb(2, 132, 199), delegate { ForceRestartSelected(); }), 3, 0);
+            rejoin.Controls.Add(LayoutButton("Rejoin ทุกจอ", Color.FromArgb(180, 83, 9), delegate { WatchdogEngine.KillRobloxAll(windows); }), 4, 0);
             tools.Controls.Add(rejoin, 0, 2);
 
             lblBannerInfo = MakeLabel("เปิด Real ค้างไว้สำหรับ Auto Inject / Execute • บัญชีที่ลบจาก Real จะหยุดติดตามอัตโนมัติ", false);

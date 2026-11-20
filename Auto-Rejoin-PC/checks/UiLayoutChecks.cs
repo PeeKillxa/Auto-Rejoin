@@ -34,6 +34,9 @@ static class UiLayoutChecks
                 Control[] loginButtons = form.Controls.Find("RealLoginTimeoutButton", true);
                 if (loginButtons.Length != 1 || loginButtons[0].Height < 30)
                     throw new Exception("Real login timeout control is missing or clipped");
+                var trackerWait = (NumericUpDown)form.Controls.Find("TrackerStartupWait", true)[0];
+                if (!trackerWait.Enabled || trackerWait.Width < 64 || trackerWait.Value != WatchdogEngine.TrackerStartupWaitSec)
+                    throw new Exception("Tracker wait control is missing, clipped, or out of sync");
                 ListView grid=(ListView)list;
                 if(grid.Columns.Count!=7)throw new Exception("Per-account Rejoin column is missing");
                 AccountSlot account=WatchdogEngine.Accounts[0];

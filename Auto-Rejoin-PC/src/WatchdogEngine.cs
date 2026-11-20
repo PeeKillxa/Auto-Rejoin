@@ -47,7 +47,6 @@ namespace NexusRobloxManager
         public bool RejoinBusy = false;
         public bool StopForConflict = false;
         public DateTime NextRejoinUtc = DateTime.MinValue;
-        public DateTime LaunchDeadlineUtc = DateTime.MinValue;
         public int LaunchPid = 0;
         public int Failures = 0;
         public DateTime LastSeenRunningUtc = DateTime.MinValue;
@@ -79,6 +78,7 @@ namespace NexusRobloxManager
         public bool WatchdogEnabled = true;
         public long TargetPlaceId = 8304191830;
         public int UiTimeoutSec = 90;
+        public int TrackerStartupWaitSec;
         public bool HideNewClients;
     }
 
@@ -104,6 +104,11 @@ namespace NexusRobloxManager
         public static bool WatchdogEnabled = true;
         public static long TargetPlaceId = 8304191830;
         public static int UiTimeoutSec = 90;
+        public const int MinTrackerStartupWaitSec = 120;
+        public const int DefaultTrackerStartupWaitSec = 180;
+        public const int MaxTrackerStartupWaitSec = 900;
+        private static volatile int trackerStartupWaitSec = DefaultTrackerStartupWaitSec;
+        public static int TrackerStartupWaitSec { get { return trackerStartupWaitSec; } }
         public static bool HideNewClients;
         private static readonly Dictionary<int, ManagedSession> pendingVisibility = new Dictionary<int, ManagedSession>();
 
@@ -302,6 +307,9 @@ namespace NexusRobloxManager
                 HideNewClients = cfg.HideNewClients;
                 if (cfg.TargetPlaceId > 0) TargetPlaceId = cfg.TargetPlaceId;
                 if (cfg.UiTimeoutSec >= 45) UiTimeoutSec = cfg.UiTimeoutSec;
+                int waitSeconds = cfg.TrackerStartupWaitSec > 0
+                    ? cfg.TrackerStartupWaitSec : Math.Max(DefaultTrackerStartupWaitSec, cfg.UiTimeoutSec);
+                trackerStartupWaitSec = Math.Max(MinTrackerStartupWaitSec, Math.Min(MaxTrackerStartupWaitSec, waitSeconds));
             }
             catch { }
         }
@@ -310,16 +318,54 @@ namespace NexusRobloxManager
         {
             try
             {
-                PersistedConfig cfg = new PersistedConfig();
-                cfg.WatchdogEnabled = WatchdogEnabled;
-                cfg.TargetPlaceId = TargetPlaceId;
-                cfg.UiTimeoutSec = UiTimeoutSec;
-                cfg.HideNewClients = HideNewClients;
-                JavaScriptSerializer ser = new JavaScriptSerializer();
-                File.WriteAllText(SettingsFilePath, ser.Serialize(cfg), Utf8NoBom);
-                SyncWorkspaceConfigFile();
+                lock (SyncRoot)
+                {
+                    WriteSettings(TrackerStartupWaitSec);
+                    SyncWorkspaceConfigFile();
+                }
             }
             catch { }
+        }
+
+        private static void WriteSettings(int startupWaitSeconds)
+        {
+            var cfg = new PersistedConfig {
+                WatchdogEnabled = WatchdogEnabled, TargetPlaceId = TargetPlaceId,
+                UiTimeoutSec = UiTimeoutSec, TrackerStartupWaitSec = startupWaitSeconds,
+                HideNewClients = HideNewClients
+            };
+            string path = SettingsFilePath;
+            string stage = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(stage, new JavaScriptSerializer().Serialize(cfg), Utf8NoBom);
+                if (File.Exists(path)) File.Replace(stage, path, null);
+                else File.Move(stage, path);
+            }
+            finally
+            {
+                try { File.Delete(stage); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+
+        public static bool TrySetTrackerStartupWait(int seconds)
+        {
+            if (seconds < MinTrackerStartupWaitSec || seconds > MaxTrackerStartupWaitSec) return false;
+            lock (SyncRoot)
+            {
+                try { WriteSettings(seconds); }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+                trackerStartupWaitSec = seconds;
+                return true;
+            }
+        }
+
+        private static bool TrackerStartupWaitElapsed(double ageSeconds)
+        {
+            return ageSeconds >= TrackerStartupWaitSec;
         }
 
         public static void SyncWorkspaceConfigFile()
@@ -686,24 +732,27 @@ namespace NexusRobloxManager
 
                     string logStage = (logInfo != null) ? logInfo.Stage : "INIT";
                     bool isErr276 = (logStage == "ERR 276" || hbDiscCode == 276);
+                    bool startupWaitElapsed = TrackerStartupWaitElapsed(procAgeSec);
                     bool isLeftMapInLog = (logStage == "LEFT_MAP") ||
-                                          (logStage == "APP_BOOT" && procAgeSec >= 45.0);
+                                          (logStage == "APP_BOOT" && startupWaitElapsed);
                     bool isDiscInLog = (logStage == "DISCONNECTED");
                     bool isTeleportingNow = (logStage == "TELEPORTING" && (nowUtc - logInfo.LastTeleportAtUtc).TotalSeconds < 35.0) ||
                                             (hbTeleporting && hbAge >= 0 && hbAge < 35 && !isLeftMapInLog && !isDiscInLog);
 
-                    // Heartbeat timeout: 20s during normal play (tracker pulses every 2s), 35s during teleport, 60s max initial load
+                    // Keep the first heartbeat wait separate from the timeout for a tracker that has already started.
                     bool staleInGameHb = hasFreshSessionHb && hbAge >= Math.Max(90, UiTimeoutSec);
                     bool stuckLoadingNoHb = !hasFreshSessionHb && logStage != "IN_GAME" &&
-                        !isTeleportingNow && procAgeSec >= Math.Max(120, UiTimeoutSec);
+                        !isTeleportingNow && startupWaitElapsed;
                     bool hungWindow = false;
-                    if (procAgeSec >= 120 && w.Hwnd != IntPtr.Zero && Native.IsWindow(w.Hwnd))
+                    bool canCheckHang = hasFreshSessionHb ? procAgeSec >= 120 : startupWaitElapsed;
+                    if (canCheckHang && w.Hwnd != IntPtr.Zero && Native.IsWindow(w.Hwnd))
                     {
                         IntPtr reply;
                         bool responds = Native.SendMessageTimeout(w.Hwnd, 0, IntPtr.Zero, null,
                             Native.SMTO_ABORTIFHUNG, 250, out reply) != IntPtr.Zero;
                         hungWindow = ConfirmUnresponsiveWindow(w.Pid, responds, nowUtc);
                     }
+                    else pidUnresponsiveSinceUtc.Remove(w.Pid);
 
                     string status;
                     string abnormalReason = "";
@@ -1414,8 +1463,9 @@ namespace NexusRobloxManager
             if (log.Stage != "LEFT_MAP" && log.Stage != "APP_BOOT") return false;
             // Positive Home/app-session evidence is mandatory. A loading or unknown window is not enough.
             if (log.StageUpdatedAtUtc == DateTime.MinValue) return false;
-            return force || ((now - window.StartTime.ToUniversalTime()).TotalSeconds >= 120 &&
-                (now - log.StageUpdatedAtUtc).TotalSeconds >= 15);
+            double age = (now - window.StartTime.ToUniversalTime()).TotalSeconds;
+            bool readyToClose = log.Stage == "APP_BOOT" ? TrackerStartupWaitElapsed(age) : age >= 120;
+            return force || (readyToClose && (now - log.StageUpdatedAtUtc).TotalSeconds >= 15);
         }
 
         private static List<RobloxWin> FindUnmappedHomeWindows(bool force)
@@ -1556,7 +1606,7 @@ namespace NexusRobloxManager
                             {
                                 bool launchedAlive = IsClientAlive(acc.LaunchPid);
                                 if (launchedAlive && (acc.Status == "IN_GAME" || acc.Status == "FARMING")) continue;
-                                if (now < acc.LaunchDeadlineUtc) continue;
+                                if (!TrackerStartupWaitElapsed((now - acc.LastRestartSentAt).TotalSeconds)) continue;
                                 acc.LaunchPid = 0;
                                 acc.NextRejoinUtc = now.AddSeconds(RetryDelaySeconds(++acc.Failures));
                                 LogEvent("Nexus retry @" + acc.Username + " in " + RetryDelaySeconds(acc.Failures) + "s (launch did not become healthy)");
@@ -1599,7 +1649,6 @@ namespace NexusRobloxManager
                             launch.KnownProcesses[pid] = launch.LastObservedStartUtc;
                             launch.Status = "RESTARTING";
                             launch.LastRestartSentAt = DateTime.UtcNow;
-                            launch.LaunchDeadlineUtc = DateTime.UtcNow.AddSeconds(Math.Max(120, UiTimeoutSec));
                             launch.RestartCount++;
                         }
                         LogEvent("Nexus launched @" + launch.Username + " (PID " + pid + "); waiting for game / Real auto inject");
